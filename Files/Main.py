@@ -3,6 +3,7 @@ from random import randint
 import time
 import colorsys
 from base import *
+import copy
 
 class Car:
     def __init__(self, object, path, MoveVector):
@@ -64,8 +65,58 @@ def CheckNode(Node, visited, Graph):
         if not visited[Node2]:
             CheckNode(Node2, visited, Graph)
 
-def CreatePath(path):
+def NonOptimiseCreatePath(path):
     global CityGraph
+    Size = len(CityGraph)
+    start = path[0]
+    end = path[1]
+    Distance = [10000] * Size
+    VisitedNodes = [1] * Size
+    Distance[start] = 0
+    MinIndex = 0
+    while MinIndex < 10000:
+        MinIndex = 10000
+        min = 10000
+        for i in range(Size):
+            if (VisitedNodes[i] == 1 and Distance[i] < min):
+                min = Distance[i]
+                MinIndex = i
+        if MinIndex != 10000:
+            for i in range(Size):
+                if (CityGraph[MinIndex][i] > 0):
+                    temp = min + CityGraph[MinIndex][i]
+                    if temp < Distance[i]:
+                        Distance[i] = temp
+            VisitedNodes[MinIndex] = 0
+    VisitedNodes[0] = end
+    k = 1
+    weight = Distance[end]
+    while (end != start):
+        for i in range(Size):
+            if (CityGraph[i][end] != 0):
+                temp = weight - CityGraph[i][end]
+                if (temp == Distance[i]):
+                    weight = temp
+                    end = i
+                    VisitedNodes[k] = i
+                    k += 1
+    i = k - 1
+    path = [0] * k
+    j = 0
+    while i >= 0:
+        path[j] = VisitedNodes[i]
+        j += 1
+        i -= 1
+    return path
+
+def OptimiseCreatePath(path):
+    global CityGraph
+    global Nodes
+    CopyCityGraph = copy.deepcopy(CityGraph)
+    for i in range(len(CopyCityGraph)):
+        for j in range(len(CopyCityGraph)):
+            if CopyCityGraph[i][j] != 0:
+                CopyCityGraph[i][j] += int(canvas.itemconfig(Nodes[j].CarCount)["text"][4]) * 100
     Size = len(CityGraph)
     start = path[0]
     end = path[1]
@@ -113,7 +164,7 @@ def CreateCar():
     NewCar = Car(0, [0, 0], [0, 0])
     while NewCar.path[0] == NewCar.path[1]:
         NewCar.path = [randint(0, 19), randint(0, 19)]
-    NewCar.path = CreatePath(NewCar.path)
+    NewCar.path = OptimiseCreatePath(NewCar.path)
     coords = canvas.coords(Nodes[NewCar.path[0]].object)
     coords[0] += 5
     coords[1] += 5
@@ -124,18 +175,45 @@ def CreateCar():
     canvas.itemconfig(Nodes[NewCar.path[0]].CarCount, text = CarCount)
     Cars.append(NewCar)
 
+def OutInformation(FrameCount, AverageCarCount, AverageMaxCarCount):
+    Count = 0
+    MaxCount = 0
+    for i in range(len(Nodes)):
+        Count += int(canvas.itemconfig(Nodes[i].CarCount)['text'][4])
+        MaxCount = max(MaxCount, int(canvas.itemconfig(Nodes[i].CarCount)['text'][4]))
+    canvas.itemconfig(Information[0], text = str(Count))
+    canvas.itemconfig(Information[1], text = str(MaxCount))
+    if round(FrameCount) % 60 < 10:
+        String = "0"
+    else:
+        String = ""
+    canvas.itemconfig(Information[2], text = str(round(FrameCount) // 60) + ":" + String + str(round(FrameCount) % 60))
+    FrameCount = round(FrameCount * 100 / 3) - 1
+    if FrameCount > 0:
+        AverageCarCount = (AverageCarCount * (FrameCount - 1) + Count) / FrameCount
+        AverageMaxCarCount = (AverageMaxCarCount * (FrameCount - 1) + MaxCount) / FrameCount
+    canvas.itemconfig(Information[3], text = str(round(AverageCarCount)))
+    canvas.itemconfig(Information[4], text = str(round(AverageMaxCarCount)))
+    return [AverageCarCount, AverageMaxCarCount]
+
 def Simulation():
     global Nodes
     global ModeKey
     i = 0
+    FrameCount = 0
+    AverageCarCount = 0
+    AverageMaxCarCount = 0
     while True:
+        FrameCount += 0.03
         if ModeKey == 0:
             Clean()
             break
-        
+        FunctionResult = OutInformation(FrameCount, AverageCarCount, AverageMaxCarCount)
+        AverageCarCount = FunctionResult[0]
+        AverageMaxCarCount = FunctionResult[1]
         if i % 7 == 0 and len(Cars) < 300:
             CreateCar()
-        if i % 300 == 0 and i != 0:
+        if i % 150 == 0 and i != 0:
             for i in range(len(TrafficLights)):
                 TrafficLights[i].mode += (-1) ** (TrafficLights[i].mode % 2 + 1) 
                 for j in range(2):
@@ -214,7 +292,11 @@ def Clean():
         TrafficLights[i].mode = DefaultTrafficLightMode[i] + 2 * (TrafficLights[i].mode // 3)
         for j in range(2):
                 canvas.itemconfig(TrafficLights[i].object[j], fill = TrafficLightColors[TrafficLights[i].mode])
-
+    canvas.itemconfig(Information[0], text = "0")
+    canvas.itemconfig(Information[1], text = "0")
+    canvas.itemconfig(Information[2], text = "0:00")
+    canvas.itemconfig(Information[3], text = "0")
+    canvas.itemconfig(Information[4], text = "0")
 
 def Click(Edge, event, ModeKey):
     EdgeColors = {
@@ -273,8 +355,8 @@ if __name__ == "__main__":
     ModeKey = 0
     window = Tk()
     window.title("Main")
-    window.geometry("1100x1050")
-    canvas = Canvas(window, width=1100, height=1000, bg='white')
+    window.geometry("1500x950")
+    canvas = Canvas(window, width=1500, height=900, bg='white')
     canvas.pack()
     ModeButton = Button(window, text="Старт", height = 2, width = 20, command=ModeButtonClick)   
     ModeButton.pack()
@@ -284,8 +366,9 @@ if __name__ == "__main__":
     Nodes = [Node(0, 0) for i in range(20)]
     Edges = [Edge(0, (0, 0)) for i in range(28)]
     TrafficLights = [TrafficLight(0, (0, 0), 0) for i in range(56)]
-    
-    Base(Edges, Nodes, TrafficLights, canvas)
+    Information = [0, 0, 0, 0, 0]
+
+    Base(Edges, Nodes, TrafficLights, Information, canvas)
     for i in range(56):
         TrafficLights[i].mode = DefaultTrafficLightMode[i]
         for j in range(2):

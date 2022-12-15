@@ -1,6 +1,6 @@
 import tkinter.font as TkFont
 
-def Base(Edges, Nodes, TrafficLights, canvas):
+def Base(Edges, Nodes, TrafficLights, Information, canvas,):
     NodesCoords = [
         [110, 790, 130, 810],
         [250, 828, 270, 848],
@@ -23,6 +23,34 @@ def Base(Edges, Nodes, TrafficLights, canvas):
         [670, 320, 690, 340],
         [810, 325, 830, 345],
     ]
+
+    CarCounterCoords = [
+        [130, 785],
+        [272, 825],
+        [422, 867],
+        [510, 885],
+        [900, 816],
+        [1010, 790],
+        [888, 710],
+        [522, 647],
+        [328, 611],
+        [123, 577],
+        [75, 470],
+        [233, 350],
+        [420, 438],
+        [575, 475],
+        [862, 527],
+        [360, 275],
+        [490, 200],
+        [550, 280],
+        [680, 310],
+        [820, 315],
+    ]
+    for i in range(len(NodesCoords)):
+        NodesCoords[i][1] -= 60
+        NodesCoords[i][3] -= 60
+        CarCounterCoords[i][1] -= 60
+
     EdgesPath = [
         (0, 1),
         (0, 9),
@@ -75,28 +103,52 @@ def Base(Edges, Nodes, TrafficLights, canvas):
         'anchor': 'w',
         'fill': '#4de600'
     }
-
-    Nodes[0].CarCount = canvas.create_text(130, 785, TextOptions)
-    Nodes[1].CarCount = canvas.create_text(272, 825, TextOptions)
-    Nodes[2].CarCount = canvas.create_text(422, 867, TextOptions)
-    Nodes[3].CarCount = canvas.create_text(510, 885, TextOptions, anchor = 'center')
-    Nodes[4].CarCount = canvas.create_text(900, 816, TextOptions, anchor = 'e')
-    Nodes[5].CarCount = canvas.create_text(1010, 790, TextOptions, anchor = 'center')
-    Nodes[6].CarCount = canvas.create_text(888, 710, TextOptions)
-    Nodes[7].CarCount = canvas.create_text(522, 647, TextOptions)
-    Nodes[8].CarCount = canvas.create_text(328, 611, TextOptions)
-    Nodes[9].CarCount = canvas.create_text(123, 577, TextOptions)
-    Nodes[10].CarCount = canvas.create_text(75, 470, TextOptions, anchor = 'center')
-    Nodes[11].CarCount = canvas.create_text(233, 350, TextOptions, anchor = 'center')
-    Nodes[12].CarCount = canvas.create_text(420, 438, TextOptions)
-    Nodes[13].CarCount = canvas.create_text(575, 475, TextOptions, anchor = 'e')
-    Nodes[14].CarCount = canvas.create_text(862, 527, TextOptions)
+    Nodes[0].CarCount = canvas.create_text(CarCounterCoords[0], TextOptions)
+    Nodes[1].CarCount = canvas.create_text(CarCounterCoords[1], TextOptions)
+    Nodes[2].CarCount = canvas.create_text(CarCounterCoords[2], TextOptions)
+    Nodes[3].CarCount = canvas.create_text(CarCounterCoords[3], TextOptions, anchor = 'center')
+    Nodes[4].CarCount = canvas.create_text(CarCounterCoords[4], TextOptions, anchor = 'e')
+    Nodes[5].CarCount = canvas.create_text(CarCounterCoords[5], TextOptions, anchor = 'center')
+    Nodes[6].CarCount = canvas.create_text(CarCounterCoords[6], TextOptions)
+    Nodes[7].CarCount = canvas.create_text(CarCounterCoords[7], TextOptions)
+    Nodes[8].CarCount = canvas.create_text(CarCounterCoords[8], TextOptions)
+    Nodes[9].CarCount = canvas.create_text(CarCounterCoords[9], TextOptions)
+    Nodes[10].CarCount = canvas.create_text(CarCounterCoords[10], TextOptions, anchor = 'center')
+    Nodes[11].CarCount = canvas.create_text(CarCounterCoords[11], TextOptions, anchor = 'center')
+    Nodes[12].CarCount = canvas.create_text(CarCounterCoords[12], TextOptions)
+    Nodes[13].CarCount = canvas.create_text(CarCounterCoords[13], TextOptions, anchor = 'e')
+    Nodes[14].CarCount = canvas.create_text(CarCounterCoords[14], TextOptions)
     TextOptions["anchor"] = 'center'
-    Nodes[15].CarCount = canvas.create_text(360, 275, TextOptions)
-    Nodes[16].CarCount = canvas.create_text(490, 200, TextOptions)
-    Nodes[17].CarCount = canvas.create_text(550, 280, TextOptions, anchor = 'w')
-    Nodes[18].CarCount = canvas.create_text(680, 310, TextOptions)
-    Nodes[19].CarCount = canvas.create_text(820, 315, TextOptions)
+    Nodes[15].CarCount = canvas.create_text(CarCounterCoords[15], TextOptions)
+    Nodes[16].CarCount = canvas.create_text(CarCounterCoords[16], TextOptions)
+    Nodes[17].CarCount = canvas.create_text(CarCounterCoords[17], TextOptions, anchor = 'w')
+    Nodes[18].CarCount = canvas.create_text(CarCounterCoords[18], TextOptions)
+    Nodes[19].CarCount = canvas.create_text(CarCounterCoords[19], TextOptions)
+
+    InformationFont = TkFont.Font(weight = "bold", size = 20)
+    InformationOptions = {
+        'font': InformationFont,
+        'text': 'Кол-во машин:',
+        'anchor': 'center',
+        'fill': 'black'
+    }
+    canvas.create_text(1250, 200, InformationOptions)
+    canvas.create_text(1250, 300, InformationOptions, text = "Макс. кол-во машин:")
+    canvas.create_text(1250, 400, InformationOptions, text = "Таймер:")
+    canvas.create_text(1250, 600, InformationOptions, text = "Среднее кол-во машин:")
+    canvas.create_text(1250, 700, InformationOptions, text = "Среднее макс. кол-во машин:")
+    InformationFont = TkFont.Font(weight = "bold", size = 30)
+    InformationOptions = {
+        'font': InformationFont,
+        'text': '0',
+        'anchor': 'center',
+        'fill': 'black'
+    }
+    Information[0] =  canvas.create_text(1250, 250, InformationOptions)
+    Information[1] =  canvas.create_text(1250, 350, InformationOptions)
+    Information[2] =  canvas.create_text(1250, 450, InformationOptions, text = "0:00")
+    Information[3] =  canvas.create_text(1250, 650, InformationOptions)
+    Information[4] =  canvas.create_text(1250, 750, InformationOptions)
 
 def DrawLine(path, NodesCoords, canvas):
     Coords = NodesCoords[path[0]][0:2] + NodesCoords[path[1]][0:2]
