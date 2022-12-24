@@ -1,4 +1,5 @@
 from tkinter import *
+from tkinter import ttk
 from random import randint
 import time
 import colorsys
@@ -65,59 +66,17 @@ def CheckNode(Node, visited, Graph):
         if not visited[Node2]:
             CheckNode(Node2, visited, Graph)
 
-def NonOptimiseCreatePath(path):
-    global CityGraph
-    Size = len(CityGraph)
-    start = path[0]
-    end = path[1]
-    Distance = [10000] * Size
-    VisitedNodes = [1] * Size
-    Distance[start] = 0
-    MinIndex = 0
-    while MinIndex < 10000:
-        MinIndex = 10000
-        min = 10000
-        for i in range(Size):
-            if (VisitedNodes[i] == 1 and Distance[i] < min):
-                min = Distance[i]
-                MinIndex = i
-        if MinIndex != 10000:
-            for i in range(Size):
-                if (CityGraph[MinIndex][i] > 0):
-                    temp = min + CityGraph[MinIndex][i]
-                    if temp < Distance[i]:
-                        Distance[i] = temp
-            VisitedNodes[MinIndex] = 0
-    VisitedNodes[0] = end
-    k = 1
-    weight = Distance[end]
-    while (end != start):
-        for i in range(Size):
-            if (CityGraph[i][end] != 0):
-                temp = weight - CityGraph[i][end]
-                if (temp == Distance[i]):
-                    weight = temp
-                    end = i
-                    VisitedNodes[k] = i
-                    k += 1
-    i = k - 1
-    path = [0] * k
-    j = 0
-    while i >= 0:
-        path[j] = VisitedNodes[i]
-        j += 1
-        i -= 1
-    return path
-
-def OptimiseCreatePath(path):
+def CreatePath(path, CreatePathMode):
     global CityGraph
     global Nodes
     CopyCityGraph = copy.deepcopy(CityGraph)
-    for i in range(len(CopyCityGraph)):
-        for j in range(len(CopyCityGraph)):
-            if CopyCityGraph[i][j] != 0:
-                CopyCityGraph[i][j] += int(canvas.itemconfig(Nodes[j].CarCount)["text"][4]) * 100
-    Size = len(CityGraph)
+    if CreatePathMode == 'Optimise':
+        for i in range(len(CopyCityGraph)):
+            for j in range(len(CopyCityGraph)):
+                if CopyCityGraph[i][j] != 0:
+                    CopyCityGraph[i][j] += int(canvas.itemconfig(Nodes[j].CarCount)["text"][4]) * 10
+                    CopyCityGraph[i][j] += int(canvas.itemconfig(Nodes[i].CarCount)["text"][4]) * 10
+    Size = len(CopyCityGraph)
     start = path[0]
     end = path[1]
     Distance = [10000] * Size
@@ -133,8 +92,8 @@ def OptimiseCreatePath(path):
                 MinIndex = i
         if MinIndex != 10000:
             for i in range(Size):
-                if (CityGraph[MinIndex][i] > 0):
-                    temp = min + CityGraph[MinIndex][i]
+                if (CopyCityGraph[MinIndex][i] > 0):
+                    temp = min + CopyCityGraph[MinIndex][i]
                     if temp < Distance[i]:
                         Distance[i] = temp
             VisitedNodes[MinIndex] = 0
@@ -143,8 +102,8 @@ def OptimiseCreatePath(path):
     weight = Distance[end]
     while (end != start):
         for i in range(Size):
-            if (CityGraph[i][end] != 0):
-                temp = weight - CityGraph[i][end]
+            if (CopyCityGraph[i][end] != 0):
+                temp = weight - CopyCityGraph[i][end]
                 if (temp == Distance[i]):
                     weight = temp
                     end = i
@@ -159,12 +118,12 @@ def OptimiseCreatePath(path):
         i -= 1
     return path
 
-def CreateCar():
+def CreateCar(CreateCarMode):
     global Cars
     NewCar = Car(0, [0, 0], [0, 0])
     while NewCar.path[0] == NewCar.path[1]:
         NewCar.path = [randint(0, 19), randint(0, 19)]
-    NewCar.path = OptimiseCreatePath(NewCar.path)
+    NewCar.path = CreatePath(NewCar.path, CreateCarMode)
     coords = canvas.coords(Nodes[NewCar.path[0]].object)
     coords[0] += 5
     coords[1] += 5
@@ -199,6 +158,9 @@ def OutInformation(FrameCount, AverageCarCount, AverageMaxCarCount):
 def Simulation():
     global Nodes
     global ModeKey
+    global CreateCarMode
+    global CarSpawnFrequency
+    global Box
     i = 0
     FrameCount = 0
     AverageCarCount = 0
@@ -211,8 +173,8 @@ def Simulation():
         FunctionResult = OutInformation(FrameCount, AverageCarCount, AverageMaxCarCount)
         AverageCarCount = FunctionResult[0]
         AverageMaxCarCount = FunctionResult[1]
-        if i % 7 == 0 and len(Cars) < 300:
-            CreateCar()
+        if i % CarSpawnFrequency == 0 and len(Cars) < 500:
+            CreateCar(CreateCarMode)
         if i % 150 == 0 and i != 0:
             for i in range(len(TrafficLights)):
                 TrafficLights[i].mode += (-1) ** (TrafficLights[i].mode % 2 + 1) 
@@ -344,6 +306,24 @@ def ModeButtonClick():
         ModeButton["text"] = "Старт"
         Clean()
 
+def CurrentCreateCarMode(event):
+    global CreateCarMode
+    global Box
+    CreateCarModes = {
+        'Оптимизированный': 'Optimise',
+        'Неоптимизированный': 'NonOptimise'
+    }
+    CreateCarMode = CreateCarModes[Box.get()]
+
+def CurrentCarSpawnFrequency():
+    global CarSpawnFrequency
+    FrequenciesMode = {
+        'Низкая': 15,
+        'Средняя': 7,
+        'Высокая': 5
+    }
+    CarSpawnFrequency = FrequenciesMode[Frequencies.get()]
+
 if __name__ == "__main__":
     TrafficLightColors = {
         1: 'green',
@@ -351,6 +331,8 @@ if __name__ == "__main__":
         3: 'gray',
         4: 'gray'
     }
+    CreateCarMode = 'Optimise'
+    CarSpawnFrequency = 7
     Cars = []
     ModeKey = 0
     window = Tk()
@@ -360,13 +342,60 @@ if __name__ == "__main__":
     canvas.pack()
     ModeButton = Button(window, text="Старт", height = 2, width = 20, command=ModeButtonClick)   
     ModeButton.pack()
-
-
+    TextFont = ("Arial", 16, "bold")
+    Box = ttk.Combobox(
+        values = ('Оптимизированный', 'Неоптимизированный'),
+        state = "readonly",
+        justify = "center",
+        width = 25,
+        font = TextFont
+    )
+    Box.current(0)
+    Box.pack()
+    Box.bind("<<ComboboxSelected>>", CurrentCreateCarMode)
+    canvas.create_window((1250, 225), anchor = "center", window = Box)
     CityGraph = [[0] * 20 for i in range(20)]
     Nodes = [Node(0, 0) for i in range(20)]
     Edges = [Edge(0, (0, 0)) for i in range(28)]
     TrafficLights = [TrafficLight(0, (0, 0), 0) for i in range(56)]
     Information = [0, 0, 0, 0, 0]
+    
+    Low = "Низкая"
+    Medium = "Средняя"
+    High = "Высокая"
+    
+    Frequencies = StringVar(value = Medium)
+    FirstButton = Radiobutton(
+        text = Low,
+        value = Low, 
+        variable = Frequencies, 
+        background = 'gray',
+        font = TextFont,
+        indicatoron = 0,
+        command = CurrentCarSpawnFrequency
+    )
+    FirstButton.pack()
+    SecondButton = Radiobutton(
+        text = Medium, 
+        value = Medium, 
+        variable = Frequencies, 
+        background = 'gray',
+        font = TextFont,
+        indicatoron = 0,
+        command = CurrentCarSpawnFrequency)
+    SecondButton.pack()
+    ThirdButton = Radiobutton(
+        text = High, 
+        value = High, 
+        variable = Frequencies, 
+        background = 'gray',
+        font = TextFont,
+        indicatoron = 0,
+        command = CurrentCarSpawnFrequency)
+    ThirdButton.pack()
+    canvas.create_window((1250, 70), anchor = "center", window = FirstButton)
+    canvas.create_window((1250, 110), anchor = "center", window = SecondButton)
+    canvas.create_window((1250, 150), anchor = "center", window = ThirdButton)
 
     Base(Edges, Nodes, TrafficLights, Information, canvas)
     for i in range(56):
