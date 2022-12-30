@@ -1,6 +1,6 @@
 import tkinter.font as TkFont
 
-def Base(Edges, Nodes, TrafficLights, Information, canvas,):
+def Base(Edges, Nodes, TrafficLights, Information, canvas, WindowX, WindowY):
     NodesCoords = [
         [110, 790, 130, 810],
         [250, 828, 270, 848],
@@ -50,6 +50,12 @@ def Base(Edges, Nodes, TrafficLights, Information, canvas,):
         NodesCoords[i][1] -= 60
         NodesCoords[i][3] -= 60
         CarCounterCoords[i][1] -= 60
+        for j in range(4):
+            if j % 2 == 0: NodesCoords[i][j] = (NodesCoords[i][j] / 1500) * WindowX
+            else: NodesCoords[i][j] = (NodesCoords[i][j] / 950) * WindowY
+        for j in range(2):
+            if j % 2 == 0: CarCounterCoords[i][j] = (CarCounterCoords[i][j] / 1500) * WindowX
+            else: CarCounterCoords[i][j] = (CarCounterCoords[i][j] / 950) * WindowY
 
     EdgesPath = [
         (0, 1),
@@ -125,32 +131,33 @@ def Base(Edges, Nodes, TrafficLights, Information, canvas,):
     Nodes[18].CarCount = canvas.create_text(CarCounterCoords[18], TextOptions)
     Nodes[19].CarCount = canvas.create_text(CarCounterCoords[19], TextOptions)
 
-    InformationFont = TkFont.Font(family = "Times", weight = "bold", size = 20)
+    TextX = round(WindowX * (1250 / 1500))
+    InformationFont = TkFont.Font(family = "Times", weight = "bold", size = round((WindowX - TextX) / 12.5))
     InformationOptions = {
         'font': InformationFont,
         'text': 'Кол-во машин:',
         'anchor': 'center',
         'fill': 'black'
     }
-    canvas.create_text(1250, 300, InformationOptions)
-    canvas.create_text(1250, 30, InformationOptions, text = "Частота появления машин:")
-    canvas.create_text(1250, 190, InformationOptions, text = "Алгоритм поиска пути:")
-    canvas.create_text(1250, 400, InformationOptions, text = "Макс. кол-во машин на светофоре:")
-    canvas.create_text(1250, 500, InformationOptions, text = "Время:")
-    canvas.create_text(1250, 650, InformationOptions, text = "Среднее кол-во машин:")
-    canvas.create_text(1250, 750, InformationOptions, text = "Среднее макс. кол-во\nмашин на светофоре:")
-    InformationFont = TkFont.Font(family = "Times", weight = "bold", size = 30)
+    canvas.create_text(TextX, WindowY / 3.2, InformationOptions)
+    canvas.create_text(TextX, WindowY / 31.7, InformationOptions, text = "Частота появления машин:")
+    canvas.create_text(TextX, WindowY / 5, InformationOptions, text = "Алгоритм поиска пути:")
+    canvas.create_text(TextX, WindowY / 2.4, InformationOptions, text = "Макс. кол-во машин на светофоре:")
+    canvas.create_text(TextX, WindowY / 1.9, InformationOptions, text = "Время:")
+    canvas.create_text(TextX, WindowY / 1.5, InformationOptions, text = "Среднее кол-во машин:")
+    canvas.create_text(TextX, WindowY / 1.3, InformationOptions, text = "Среднее макс. кол-во\nмашин на светофоре:")
+    InformationFont = TkFont.Font(family = "Times", weight = "bold", size = round((WindowX - TextX) / 8))
     InformationOptions = {
         'font': InformationFont,
         'text': '0',
         'anchor': 'center',
         'fill': 'black'
     }
-    Information[0] =  canvas.create_text(1250, 350, InformationOptions)
-    Information[1] =  canvas.create_text(1250, 450, InformationOptions)
-    Information[2] =  canvas.create_text(1250, 550, InformationOptions, text = "0:00")
-    Information[3] =  canvas.create_text(1250, 700, InformationOptions)
-    Information[4] =  canvas.create_text(1250, 810, InformationOptions)
+    Information[0] =  canvas.create_text(TextX, WindowY / 2.7, InformationOptions)
+    Information[1] =  canvas.create_text(TextX, WindowY / 2.1, InformationOptions)
+    Information[2] =  canvas.create_text(TextX, WindowY / 1.7, InformationOptions, text = "0:00")
+    Information[3] =  canvas.create_text(TextX, WindowY / 1.4, InformationOptions)
+    Information[4] =  canvas.create_text(TextX, WindowY / 1.2, InformationOptions)
 
 def DrawLine(path, NodesCoords, canvas):
     Coords = NodesCoords[path[0]][0:2] + NodesCoords[path[1]][0:2]

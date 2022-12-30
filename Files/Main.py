@@ -336,9 +336,12 @@ if __name__ == "__main__":
     Cars = []
     ModeKey = 0
     window = Tk()
+    WindowX = round(window.winfo_screenwidth() / 1.28)
+    WindowY = round(window.winfo_screenheight() / 1.137)
+    TextX = round(WindowX * (1250 / 1500))
     window.title("Main")
-    window.geometry("1500x950")
-    canvas = Canvas(window, width=1500, height=900, bg='white')
+    window.geometry("{}x{}".format(WindowX, WindowY))
+    canvas = Canvas(window, width=WindowX, height=WindowY - 50, bg='white')
     canvas.pack()
     ModeButton = Button(window, text="Старт", height = 2, width = 20, command=ModeButtonClick)   
     ModeButton.pack()
@@ -353,7 +356,7 @@ if __name__ == "__main__":
     Box.current(0)
     Box.pack()
     Box.bind("<<ComboboxSelected>>", CurrentCreateCarMode)
-    canvas.create_window((1250, 225), anchor = "center", window = Box)
+    canvas.create_window((TextX, WindowY * (225 / 950)), anchor = "center", window = Box)
     CityGraph = [[0] * 20 for i in range(20)]
     Nodes = [Node(0, 0) for i in range(20)]
     Edges = [Edge(0, (0, 0)) for i in range(28)]
@@ -393,11 +396,11 @@ if __name__ == "__main__":
         indicatoron = 0,
         command = CurrentCarSpawnFrequency)
     ThirdButton.pack()
-    canvas.create_window((1250, 70), anchor = "center", window = FirstButton)
-    canvas.create_window((1250, 110), anchor = "center", window = SecondButton)
-    canvas.create_window((1250, 150), anchor = "center", window = ThirdButton)
+    canvas.create_window((TextX, WindowY * (70 / 950)), anchor = "center", window = FirstButton)
+    canvas.create_window((TextX, WindowY * (110 / 950)), anchor = "center", window = SecondButton)
+    canvas.create_window((TextX, WindowY * (150 / 950)), anchor = "center", window = ThirdButton)
 
-    Base(Edges, Nodes, TrafficLights, Information, canvas)
+    Base(Edges, Nodes, TrafficLights, Information, canvas, WindowX, WindowY)
     for i in range(56):
         TrafficLights[i].mode = DefaultTrafficLightMode[i]
         for j in range(2):
