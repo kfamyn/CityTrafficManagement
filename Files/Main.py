@@ -74,8 +74,8 @@ def CreatePath(path, CreatePathMode):
         for i in range(len(CopyCityGraph)):
             for j in range(len(CopyCityGraph)):
                 if CopyCityGraph[i][j] != 0:
-                    CopyCityGraph[i][j] += int(canvas.itemconfig(Nodes[j].CarCount)["text"][4]) * 10
-                    CopyCityGraph[i][j] += int(canvas.itemconfig(Nodes[i].CarCount)["text"][4]) * 10
+                    CopyCityGraph[i][j] += int(canvas.itemconfig(Nodes[j].CarCount)["text"][4]) * 5
+                    CopyCityGraph[i][j] += int(canvas.itemconfig(Nodes[i].CarCount)["text"][4]) * 5
     Size = len(CopyCityGraph)
     start = path[0]
     end = path[1]
@@ -155,6 +155,24 @@ def OutInformation(FrameCount, AverageCarCount, AverageMaxCarCount):
     canvas.itemconfig(Information[4], text = str(round(AverageMaxCarCount)))
     return [AverageCarCount, AverageMaxCarCount]
 
+def DrawPath(path, LineOptions):
+    coords = canvas.coords(Nodes[path[0]].object)
+    coords[0] += 20
+    coords[1] += 20
+    coords[2] -= 20
+    coords[3] -= 20
+    canvas.create_oval(coords, fill="green")
+    coords = canvas.coords(Nodes[path[-1]].object)
+    coords[0] += 20
+    coords[1] += 20
+    coords[2] -= 20
+    coords[3] -= 20
+    canvas.create_oval(coords, fill="green")
+    while len(path) > 1:
+        PathToDraw = [path[0], path[1]]
+        DrawLine(PathToDraw, NodesCoords, canvas, LineOptions)
+        path.pop(0)
+        
 def Simulation():
     global Nodes
     global ModeKey
@@ -175,6 +193,7 @@ def Simulation():
         AverageMaxCarCount = FunctionResult[1]
         if i % CarSpawnFrequency == 0 and len(Cars) < 500:
             CreateCar(CreateCarMode)
+
         if i % 150 == 0 and i != 0:
             for i in range(len(TrafficLights)):
                 TrafficLights[i].mode += (-1) ** (TrafficLights[i].mode % 2 + 1) 

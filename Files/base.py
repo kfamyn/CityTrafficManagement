@@ -1,7 +1,6 @@
 import tkinter.font as TkFont
 
-def Base(Edges, Nodes, TrafficLights, Information, canvas, WindowX, WindowY):
-    NodesCoords = [
+NodesCoords = [
         [110, 790, 130, 810],
         [250, 828, 270, 848],
         [400, 868, 420, 888],
@@ -23,6 +22,8 @@ def Base(Edges, Nodes, TrafficLights, Information, canvas, WindowX, WindowY):
         [670, 320, 690, 340],
         [810, 325, 830, 345],
     ]
+
+def Base(Edges, Nodes, TrafficLights, Information, canvas, WindowX, WindowY):
 
     CarCounterCoords = [
         [130, 785],
@@ -51,10 +52,11 @@ def Base(Edges, Nodes, TrafficLights, Information, canvas, WindowX, WindowY):
         NodesCoords[i][3] -= 60
         CarCounterCoords[i][1] -= 60
         for j in range(4):
-            if j % 2 == 0: NodesCoords[i][j] = (NodesCoords[i][j] / 1500) * WindowX
-            else: NodesCoords[i][j] = (NodesCoords[i][j] / 950) * WindowY
+            if j == 0: NodesCoords[i][j] = (NodesCoords[i][j] / 1500) * WindowX
+            elif j == 1: NodesCoords[i][j] = (NodesCoords[i][j] / 950) * WindowY
+            else: NodesCoords[i][j] = NodesCoords[i][j - 2] + 20
         for j in range(2):
-            if j % 2 == 0: CarCounterCoords[i][j] = (CarCounterCoords[i][j] / 1500) * WindowX
+            if j == 0: CarCounterCoords[i][j] = (CarCounterCoords[i][j] / 1500) * WindowX
             else: CarCounterCoords[i][j] = (CarCounterCoords[i][j] / 950) * WindowY
 
     EdgesPath = [
@@ -90,7 +92,11 @@ def Base(Edges, Nodes, TrafficLights, Information, canvas, WindowX, WindowY):
 
     for i in range(28):
         Edges[i].path = EdgesPath[i]
-        Edges[i].object = DrawLine(Edges[i].path, NodesCoords, canvas)
+        LineOptions = {
+            'fill': 'black',
+            'width': 5
+        }
+        Edges[i].object = DrawLine(Edges[i].path, NodesCoords, canvas, LineOptions)
     for i in range(56):
         TrafficLights[i].path = EdgesPath[(i // 2)]
         TrafficLights[i].path = [TrafficLights[i].path[0], TrafficLights[i].path[1]]
@@ -159,14 +165,10 @@ def Base(Edges, Nodes, TrafficLights, Information, canvas, WindowX, WindowY):
     Information[3] =  canvas.create_text(TextX, WindowY / 1.4, InformationOptions)
     Information[4] =  canvas.create_text(TextX, WindowY / 1.2, InformationOptions)
 
-def DrawLine(path, NodesCoords, canvas):
+def DrawLine(path, NodesCoords, canvas, LineOptions):
     Coords = NodesCoords[path[0]][0:2] + NodesCoords[path[1]][0:2]
     for i in range(4):
         Coords[i] += 10
-    LineOptions = {
-        'fill': 'black',
-        'width': 5
-    }
     NewLine = canvas.create_line(Coords, LineOptions)
     return NewLine
 
