@@ -23,43 +23,98 @@ NodesCoords = [
         [810, 325, 830, 345],
     ]
 
-def Base(Edges, Nodes, TrafficLights, Information, canvas, WindowX, WindowY):
+InfoText = """
+                                        Общая информация.
 
-    CarCounterCoords = [
-        [130, 785],
-        [272, 825],
-        [422, 867],
-        [510, 885],
-        [900, 816],
-        [1010, 790],
-        [888, 710],
-        [522, 647],
-        [328, 611],
-        [123, 577],
-        [75, 470],
-        [233, 350],
-        [420, 438],
-        [575, 475],
-        [862, 527],
-        [360, 275],
-        [490, 200],
-        [550, 280],
-        [680, 310],
-        [820, 315],
-    ]
+Основная цель данной программы – симуляция автомобильного движения в городе. 
+Смысл – наглядное сравнение алгоритмов координации автомобильных потоков. 
+Наша задача – минимизировать время в пути для всех автомобилистов. 
+Все пункты отправления и назначения автомобилей генерируются случайным образом, 
+после чего для них рассчитывается маршрут, опираясь на один из алгоритмов:
+1) Неоптимизированный: по кратчайшему по расстоянию пути.
+2) Оптимизированный: по кратчайшему по времени пути.
+Более подробное описание алгоритмов можно найти в приложенной презентации.
+Для корректной работы программы необходимо поставить 100% масштаб в Windows.
+
+                                        Рабочая область.
+
+Находится в левой части окна. 
+В ней представлены граф (симуляция городских дорог) и кнопки для его настройки, 
+которые всплывают при нажатии кнопки «Редактировать».
+Добавить – позволяет добавить вершину (нажать в пустой области один раз) 
+или добавить дорогу (нажать по одному разу на уже существующие вершины, которые необходимо соединить).
+Удалить – позволяет удалить вершину, дорогу или светофор, путем нажатие на них.
+Светофор – позволяет добавить светофор или поменять его цвет в начальный момент времени.
+При работе со светофорами необходимо нажимать на стрелку светофора.
+
+                                        Информационная область.
+
+Находится в правой части окна. Позволяет настроить параметры симуляции и узнать информацию о ней.
+Частота появления машин – параметр, отвечающий за то, с какой интенсивностью появляются автомобили. 
+Можно использовать для симуляции разной загруженности дорог.
+Алгоритм поиска пути – параметр, определяющий, 
+по какому из описанных выше алгоритмов будут строиться маршруты движения автомобилей.
+Количество машин – общее количество машин, находящихся в симуляции в данный момент.
+Максимальное количество машин в вершине – текущее максимальное количество машин, 
+стоящих в какой-либо вершине или едущих в нее по смежной дороге.
+Время – количество времени, прошедшего с момента запуска симуляции.
+Старт/стоп – запуск/остановка симуляции.
+"""
+def Base(Edges, Nodes, TrafficLights, Information, canvas, WindowX, WindowY):
     for i in range(len(NodesCoords)):
         NodesCoords[i][1] -= 60
         NodesCoords[i][3] -= 60
-        CarCounterCoords[i][1] -= 60
         for j in range(4):
             if j == 0: NodesCoords[i][j] = (NodesCoords[i][j] / 1500) * WindowX
             elif j == 1: NodesCoords[i][j] = (NodesCoords[i][j] / 950) * WindowY
-            else: NodesCoords[i][j] = NodesCoords[i][j - 2] + 20
-        for j in range(2):
-            if j == 0: CarCounterCoords[i][j] = (CarCounterCoords[i][j] / 1500) * WindowX
-            else: CarCounterCoords[i][j] = (CarCounterCoords[i][j] / 950) * WindowY
+
+    for i in range(len(Nodes)):
+        Nodes[i].object = DrawPoint(NodesCoords[i], canvas)
+        Nodes[i].CarCount = DrawCarCount(Nodes[i], canvas)
+        Nodes[i].Number = i
 
     EdgesPath = [
+        [Nodes[0], Nodes[1]],
+        (Nodes[0], Nodes[9]),
+        (Nodes[1], Nodes[2]),
+        (Nodes[1], Nodes[8]),
+        (Nodes[2], Nodes[3]),
+        (Nodes[2], Nodes[7]),
+        (Nodes[3], Nodes[4]),
+        (Nodes[4], Nodes[5]),
+        (Nodes[4], Nodes[6]),
+        (Nodes[5], Nodes[6]),
+        (Nodes[6], Nodes[7]),
+        (Nodes[6], Nodes[14]), 
+        (Nodes[7], Nodes[8]),
+        (Nodes[7], Nodes[13]),
+        (Nodes[9], Nodes[8]),
+        (Nodes[8], Nodes[11]),
+        (Nodes[9], Nodes[10]),
+        (Nodes[10], Nodes[11]),
+        (Nodes[11], Nodes[15]),
+        (Nodes[12], Nodes[13]),
+        (Nodes[15], Nodes[12]),
+        (Nodes[13], Nodes[14]),
+        (Nodes[13], Nodes[18]),
+        (Nodes[14], Nodes[19]),
+        (Nodes[15], Nodes[16]),
+        (Nodes[16], Nodes[17]),
+        (Nodes[17], Nodes[18]),
+        (Nodes[18], Nodes[19]),
+    ]
+
+    DefaultTrafficLightMode = [
+        1, 0, 1, 0, 0, 1, 1, 0,
+        1, 0, 0, 1, 0, 1, 1, 0,
+        0, 1, 0, 0, 0, 0, 1, 0,
+        0, 1, 1, 0, 1, 1, 0, 1,
+        0, 1, 1, 0, 0, 1, 1, 1,
+        0, 1, 1, 1, 0, 1, 0, 1,
+        1, 0, 0, 1, 1, 0, 0, 1
+    ]
+    
+    TrafficPath = [
         (0, 1),
         (0, 9),
         (1, 2),
@@ -90,55 +145,36 @@ def Base(Edges, Nodes, TrafficLights, Information, canvas, WindowX, WindowY):
         (18, 19),
     ]
 
-    for i in range(28):
-        Edges[i].path = EdgesPath[i]
-        LineOptions = {
-            'fill': 'black',
-            'width': 5
-        }
-        Edges[i].object = DrawLine(Edges[i].path, NodesCoords, canvas, LineOptions)
-    for i in range(56):
-        TrafficLights[i].path = EdgesPath[(i // 2)]
+    TrafficLightColors = {
+        1: 'green',
+        0: 'red'
+    }
+
+    for i in range(len(Edges)):
+        Edges[i].NodePath = EdgesPath[i]
+        Edges[i].path = NodePathToPath(Edges[i].NodePath, Nodes, canvas)
+        Coords = [
+            canvas.coords(Edges[i].NodePath[0].object)[0] + 10,
+            canvas.coords(Edges[i].NodePath[0].object)[1] + 10,
+            canvas.coords(Edges[i].NodePath[1].object)[0] + 10,
+            canvas.coords(Edges[i].NodePath[1].object)[1] + 10
+        ]
+        Edges[i].object = DrawLine(Coords, canvas)
+
+    for i in range(len(TrafficLights)):
+        TrafficLights[i].path = TrafficPath[(i // 2)]
         TrafficLights[i].path = [TrafficLights[i].path[0], TrafficLights[i].path[1]]
         if i % 2 == 1:
             TrafficLights[i].path = TrafficLights[i].path[::-1]
-        TrafficLights[i].object = CreateTrafficLight(TrafficLights[i].path, NodesCoords, canvas)
-        TrafficLights[i].mode = 1
-
-    for i in range(20):
-        Nodes[i].object = DrawPoint(NodesCoords[i], canvas)
-
-    font = TkFont.Font(weight = "bold", size = 15)
-    TextOptions = {
-        'font': font,
-        'text': "0",
-        'anchor': 'w',
-        'fill': '#4de600'
-    }
-    Nodes[0].CarCount = canvas.create_text(CarCounterCoords[0], TextOptions)
-    Nodes[1].CarCount = canvas.create_text(CarCounterCoords[1], TextOptions)
-    Nodes[2].CarCount = canvas.create_text(CarCounterCoords[2], TextOptions)
-    Nodes[3].CarCount = canvas.create_text(CarCounterCoords[3], TextOptions, anchor = 'center')
-    Nodes[4].CarCount = canvas.create_text(CarCounterCoords[4], TextOptions, anchor = 'e')
-    Nodes[5].CarCount = canvas.create_text(CarCounterCoords[5], TextOptions, anchor = 'center')
-    Nodes[6].CarCount = canvas.create_text(CarCounterCoords[6], TextOptions)
-    Nodes[7].CarCount = canvas.create_text(CarCounterCoords[7], TextOptions)
-    Nodes[8].CarCount = canvas.create_text(CarCounterCoords[8], TextOptions)
-    Nodes[9].CarCount = canvas.create_text(CarCounterCoords[9], TextOptions)
-    Nodes[10].CarCount = canvas.create_text(CarCounterCoords[10], TextOptions, anchor = 'center')
-    Nodes[11].CarCount = canvas.create_text(CarCounterCoords[11], TextOptions, anchor = 'center')
-    Nodes[12].CarCount = canvas.create_text(CarCounterCoords[12], TextOptions)
-    Nodes[13].CarCount = canvas.create_text(CarCounterCoords[13], TextOptions, anchor = 'e')
-    Nodes[14].CarCount = canvas.create_text(CarCounterCoords[14], TextOptions)
-    TextOptions["anchor"] = 'center'
-    Nodes[15].CarCount = canvas.create_text(CarCounterCoords[15], TextOptions)
-    Nodes[16].CarCount = canvas.create_text(CarCounterCoords[16], TextOptions)
-    Nodes[17].CarCount = canvas.create_text(CarCounterCoords[17], TextOptions, anchor = 'w')
-    Nodes[18].CarCount = canvas.create_text(CarCounterCoords[18], TextOptions)
-    Nodes[19].CarCount = canvas.create_text(CarCounterCoords[19], TextOptions)
+        TrafficCoords = NodesCoords[TrafficLights[i].path[0]][0:2] + NodesCoords[TrafficLights[i].path[1]][0:2]
+        TrafficLights[i].object = DrawTrafficLight(TrafficLights[i].path, TrafficCoords, canvas)
+        TrafficLights[i].mode = DefaultTrafficLightMode[i]
+        for j in range(2):
+            canvas.itemconfig(TrafficLights[i].object[j], fill = TrafficLightColors[TrafficLights[i].mode])
+        TrafficLights[i].NodePath = (Nodes[TrafficLights[i].path[0]], Nodes[TrafficLights[i].path[1]])
 
     TextX = round(WindowX * (1250 / 1500))
-    InformationFont = TkFont.Font(family = "Times", weight = "bold", size = round((WindowX - TextX) / 12.5))
+    InformationFont = TkFont.Font(family = "Arial", weight = "bold", size = round((WindowX - TextX) / 12.5))
     InformationOptions = {
         'font': InformationFont,
         'text': 'Кол-во машин:',
@@ -148,11 +184,11 @@ def Base(Edges, Nodes, TrafficLights, Information, canvas, WindowX, WindowY):
     canvas.create_text(TextX, WindowY / 3.2, InformationOptions)
     canvas.create_text(TextX, WindowY / 31.7, InformationOptions, text = "Частота появления машин:")
     canvas.create_text(TextX, WindowY / 5, InformationOptions, text = "Алгоритм поиска пути:")
-    canvas.create_text(TextX, WindowY / 2.4, InformationOptions, text = "Макс. кол-во машин на светофоре:")
+    canvas.create_text(TextX, WindowY / 2.4, InformationOptions, text = "Макс. кол-во машин в вершине:")
     canvas.create_text(TextX, WindowY / 1.9, InformationOptions, text = "Время:")
     canvas.create_text(TextX, WindowY / 1.5, InformationOptions, text = "Среднее кол-во машин:")
-    canvas.create_text(TextX, WindowY / 1.3, InformationOptions, text = "Среднее макс. кол-во\nмашин на светофоре:")
-    InformationFont = TkFont.Font(family = "Times", weight = "bold", size = round((WindowX - TextX) / 8))
+    canvas.create_text(TextX, WindowY / 1.3, InformationOptions, text = "Среднее макс. кол-во\nмашин в вершине:")
+    InformationFont = TkFont.Font(family = "Arial", weight = "bold", size = round((WindowX - TextX) / 8))
     InformationOptions = {
         'font': InformationFont,
         'text': '0',
@@ -165,10 +201,40 @@ def Base(Edges, Nodes, TrafficLights, Information, canvas, WindowX, WindowY):
     Information[3] =  canvas.create_text(TextX, WindowY / 1.4, InformationOptions)
     Information[4] =  canvas.create_text(TextX, WindowY / 1.2, InformationOptions)
 
-def DrawLine(path, NodesCoords, canvas, LineOptions):
-    Coords = NodesCoords[path[0]][0:2] + NodesCoords[path[1]][0:2]
-    for i in range(4):
-        Coords[i] += 10
+def NodePathToPath(NodePath, Nodes, canvas):
+    path = [0, 0]
+    for j in range(len(Nodes)):
+        if canvas.coords(Nodes[j].object) == canvas.coords(NodePath[0].object):
+            path[0] = j
+        if canvas.coords(Nodes[j].object) == canvas.coords(NodePath[1].object):
+            path[1] = j
+    return (path[0], path[1])
+    
+def DrawCarCount(Node, canvas):
+    font = TkFont.Font(weight = "bold", size = 15)
+    TextOptions = {
+        'font': font,
+        'text': "0",
+        'anchor': 'center',
+        'fill': '#4de600'
+    }
+    y = canvas.coords(Node.object)[1] - 10
+    x = round((canvas.coords(Node.object)[0] + canvas.coords(Node.object)[2]) / 2)
+    NewX = x
+    while len(canvas.find_overlapping(NewX - 15, y, NewX + 15, y)) > 0 and NewX < x + 20:
+        NewX += 1
+    while len(canvas.find_overlapping(NewX - 15, y, NewX + 15, y)) > 0 and NewX > x - 20:
+        NewX -= 1
+    if len(canvas.find_overlapping(NewX - 15, y, NewX + 15, y)) > 0:
+        NewX = x
+    NewCarCount = canvas.create_text(NewX, y, TextOptions)
+    return NewCarCount
+
+def DrawLine(Coords, canvas):
+    LineOptions = {
+        'fill': 'black',
+        'width': 5
+    }
     NewLine = canvas.create_line(Coords, LineOptions)
     return NewLine
 
@@ -179,70 +245,36 @@ def DrawPoint(Coords, canvas):
     NewPoint = canvas.create_oval(Coords, PointOptions)
     return NewPoint
 
-def CreateTrafficLight(path, NodesCoords, canvas):
+def DrawTrafficLight(path, TrafficCoords, canvas):
     NewTrafficLight = [0, 0]
     LightTrafficOptions = {
         'fill': 'green',
         'width': 6
     }
 
-    LineCoords = NodesCoords[path[0]][0:2] + NodesCoords[path[1]][0:2]
     for i in range(4):
-        LineCoords[i] += 10
+        TrafficCoords[i] += 10
 
-    LineVector = [LineCoords[2] - LineCoords[0], LineCoords[3] - LineCoords[1]]
+    LineVector = [TrafficCoords[2] - TrafficCoords[0], TrafficCoords[3] - TrafficCoords[1]]
     LineLength = (LineVector[0]**2 + LineVector[1]**2)**(1/2)
     LineVector = [LineVector[0] / LineLength, LineVector[1] / LineLength]
 
     for i in range(2):
-        LineCoords[i+2] = LineCoords[i] + LineVector[i] * 25
-    NewTrafficLight[0] = canvas.create_line(LineCoords, LightTrafficOptions)
+        TrafficCoords[i+2] = TrafficCoords[i] + LineVector[i] * 25
+    NewTrafficLight[0] = canvas.create_line(TrafficCoords, LightTrafficOptions)
 
     for i in range(2):
-        LineCoords[i+2] = LineCoords[i] + LineVector[i] * 30
+        TrafficCoords[i+2] = TrafficCoords[i] + LineVector[i] * 30
 
     NewLineVector = [-LineVector[1], LineVector[0]]
     TriangleCoords = [
-        LineCoords[2],
-        LineCoords[3], 
-        LineCoords[2] - LineVector[0] * 10 + NewLineVector[0] * 10, 
-        LineCoords[3] - LineVector[1] * 10 + NewLineVector[1] * 10,
-        LineCoords[2] - LineVector[0] * 10 - NewLineVector[0] * 10, 
-        LineCoords[3] - LineVector[1] * 10 - NewLineVector[1] * 10,
+        TrafficCoords[2],
+        TrafficCoords[3], 
+        TrafficCoords[2] - LineVector[0] * 10 + NewLineVector[0] * 10, 
+        TrafficCoords[3] - LineVector[1] * 10 + NewLineVector[1] * 10,
+        TrafficCoords[2] - LineVector[0] * 10 - NewLineVector[0] * 10, 
+        TrafficCoords[3] - LineVector[1] * 10 - NewLineVector[1] * 10,
     ]
     NewTrafficLight[1] = canvas.create_polygon(TriangleCoords, LightTrafficOptions)
     
     return NewTrafficLight
-
-DefaultTrafficLightMode = [
-    2, 1, 2, 1, 1, 2, 2, 1,
-    2, 1, 1, 2, 1, 2, 2, 1,
-    1, 2, 1, 1, 1, 1, 2, 1,
-    1, 2, 2, 1, 2, 2, 1, 2,
-    1, 2, 2, 1, 1, 2, 2, 2,
-    1, 2, 2, 2, 1, 2, 1, 2,
-    2, 1, 1, 2, 2, 1, 1, 2
-]
-CityModeGraph = [[1] * 20 for i in range(20)]
-DefaultCityGraph = [
-    [0, 145, 0, 0, 0, 0, 0, 0, 0, 205, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [145, 0, 155, 0, 0, 0, 0, 0, 220, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 155, 0, 105, 0, 0, 0, 240, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 105, 0, 407, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 407, 0, 102, 102, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 102, 0, 148, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 102, 148, 0, 381, 0, 0, 0, 0, 0, 0, 186, 0, 0, 0, 0, 0],
-    [0, 0, 240, 0, 0, 0, 381, 0, 182, 0, 0, 0, 0, 176, 0, 0, 0, 0, 0, 0],
-    [0, 220, 0, 0, 0, 0, 0, 182, 0, 208, 0, 277, 0, 0, 0, 0, 0, 0, 0, 0],
-    [205, 0, 0, 0, 0, 0, 0, 0, 208, 0, 114, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 114, 0, 196, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 277, 0, 196, 0, 0, 0, 0, 146, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 155, 0, 171, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 176, 0, 0, 0, 0, 155, 0, 294, 0, 0, 0, 198, 0],
-    [0, 0, 0, 0, 0, 0, 186, 0, 0, 0, 0, 0, 0, 294, 0, 0, 0, 0, 0, 214],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 146, 171, 0, 0, 0, 150, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 150, 0, 103, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 103, 0, 129, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 198, 0, 0, 0, 129, 0, 140],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 214, 0, 0, 0, 140, 0]
-]

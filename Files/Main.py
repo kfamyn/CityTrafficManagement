@@ -5,6 +5,7 @@ import time
 import colorsys
 from base import *
 import copy
+from PIL import Image, ImageTk
 
 class Car:
     def __init__(self, object, path, MoveVector):
@@ -13,9 +14,10 @@ class Car:
         self.MoveVector = MoveVector
         
 class Edge:
-    def __init__(self, object, path):
+    def __init__(self, object, path, NodePath):
         self.object = object
         self.path = path
+        self.NodePath = NodePath
 
 class Node:
     def __init__(self, object, CarCount):
@@ -23,10 +25,11 @@ class Node:
         self.CarCount = CarCount
 
 class TrafficLight:
-    def __init__(self, object, path, mode):
+    def __init__(self, object, path, mode, NodePath):
         self.object = object
         self.path = path
         self.mode = mode
+        self.NodePath = NodePath
 
 def CountToColor(Count):
     if Count > 20:
@@ -74,8 +77,8 @@ def CreatePath(path, CreatePathMode):
         for i in range(len(CopyCityGraph)):
             for j in range(len(CopyCityGraph)):
                 if CopyCityGraph[i][j] != 0:
-                    CopyCityGraph[i][j] += int(canvas.itemconfig(Nodes[j].CarCount)["text"][4]) * 5
-                    CopyCityGraph[i][j] += int(canvas.itemconfig(Nodes[i].CarCount)["text"][4]) * 5
+                    CopyCityGraph[i][j] += int(canvas.itemconfig(Nodes[j].CarCount)["text"][4]) * 10
+                    CopyCityGraph[i][j] += int(canvas.itemconfig(Nodes[i].CarCount)["text"][4]) * 10
     Size = len(CopyCityGraph)
     start = path[0]
     end = path[1]
@@ -122,7 +125,7 @@ def CreateCar(CreateCarMode):
     global Cars
     NewCar = Car(0, [0, 0], [0, 0])
     while NewCar.path[0] == NewCar.path[1]:
-        NewCar.path = [randint(0, 19), randint(0, 19)]
+        NewCar.path = [randint(0, len(Nodes) - 1), randint(0, len(Nodes) - 1)]
     NewCar.path = CreatePath(NewCar.path, CreateCarMode)
     coords = canvas.coords(Nodes[NewCar.path[0]].object)
     coords[0] += 5
@@ -172,7 +175,41 @@ def DrawPath(path, LineOptions):
         PathToDraw = [path[0], path[1]]
         DrawLine(PathToDraw, NodesCoords, canvas, LineOptions)
         path.pop(0)
-        
+
+def DrawTrafficLight(path, TrafficCoords, canvas):
+    NewTrafficLight = [0, 0]
+    LightTrafficOptions = {
+        'fill': 'green',
+        'width': 6
+    }
+
+    for i in range(4):
+        TrafficCoords[i] += 10
+
+    LineVector = [TrafficCoords[2] - TrafficCoords[0], TrafficCoords[3] - TrafficCoords[1]]
+    LineLength = (LineVector[0]**2 + LineVector[1]**2)**(1/2)
+    LineVector = [LineVector[0] / LineLength, LineVector[1] / LineLength]
+
+    for i in range(2):
+        TrafficCoords[i+2] = TrafficCoords[i] + LineVector[i] * 25
+    NewTrafficLight[0] = canvas.create_line(TrafficCoords, LightTrafficOptions)
+
+    for i in range(2):
+        TrafficCoords[i+2] = TrafficCoords[i] + LineVector[i] * 30
+
+    NewLineVector = [-LineVector[1], LineVector[0]]
+    TriangleCoords = [
+        TrafficCoords[2],
+        TrafficCoords[3], 
+        TrafficCoords[2] - LineVector[0] * 10 + NewLineVector[0] * 10, 
+        TrafficCoords[3] - LineVector[1] * 10 + NewLineVector[1] * 10,
+        TrafficCoords[2] - LineVector[0] * 10 - NewLineVector[0] * 10, 
+        TrafficCoords[3] - LineVector[1] * 10 - NewLineVector[1] * 10,
+    ]
+    NewTrafficLight[1] = canvas.create_polygon(TriangleCoords, LightTrafficOptions)
+    
+    return NewTrafficLight
+
 def Simulation():
     global Nodes
     global ModeKey
@@ -191,12 +228,12 @@ def Simulation():
         FunctionResult = OutInformation(FrameCount, AverageCarCount, AverageMaxCarCount)
         AverageCarCount = FunctionResult[0]
         AverageMaxCarCount = FunctionResult[1]
-        if i % CarSpawnFrequency == 0 and len(Cars) < 500:
+        if i % CarSpawnFrequency == 0 and len(Cars) < 400:
             CreateCar(CreateCarMode)
 
-        if i % 150 == 0 and i != 0:
+        if i % 300 == 0 and i != 0:
             for i in range(len(TrafficLights)):
-                TrafficLights[i].mode += (-1) ** (TrafficLights[i].mode % 2 + 1) 
+                TrafficLights[i].mode =  (TrafficLights[i].mode + 1) % 2
                 for j in range(2):
                         canvas.itemconfig(TrafficLights[i].object[j], fill = TrafficLightColors[TrafficLights[i].mode])
         for car in Cars:
@@ -213,8 +250,8 @@ def Simulation():
             NodeDistanse = ((CarCoords[0] - NodeCoords[0])**2 + (CarCoords[1] - NodeCoords[1])**2)**(1/2)
             if CarCoords == NodeCoords:
                 for TrafficLight in TrafficLights:
-                    if TrafficLight.path == car.path[0:2]:
-                        if TrafficLight.mode == 2:
+                    if TrafficLight.path[0] == car.path[0] and TrafficLight.path[1] == car.path[1]:
+                        if TrafficLight.mode == 0:
                             speed = 0
                 for car2 in Cars:
                     if car2.path[0:2] == car.path[0:2]:
@@ -266,63 +303,61 @@ def Clean():
     for car in Cars:
         canvas.delete(car.object)
     Cars = []
-    for i in range(20):
+    for i in range(len(Nodes)):
         canvas.itemconfig(Nodes[i].CarCount, text = "0")
         canvas.itemconfig(Nodes[i].CarCount, fill = "#4de600")
-    for i in range(56):
-        TrafficLights[i].mode = DefaultTrafficLightMode[i] + 2 * (TrafficLights[i].mode // 3)
-        for j in range(2):
-                canvas.itemconfig(TrafficLights[i].object[j], fill = TrafficLightColors[TrafficLights[i].mode])
+
     canvas.itemconfig(Information[0], text = "0")
     canvas.itemconfig(Information[1], text = "0")
     canvas.itemconfig(Information[2], text = "0:00")
     canvas.itemconfig(Information[3], text = "0")
     canvas.itemconfig(Information[4], text = "0")
 
-def Click(Edge, event, ModeKey):
-    EdgeColors = {
-        'lightgray': "black",
-        'black': "lightgray"
-    }
-
-    if ModeKey == 0:
-        CityModeGraph[Edge.path[0]][Edge.path[1]] = (CityModeGraph[Edge.path[0]][Edge.path[1]] + 1) % 2
-        CityModeGraph[Edge.path[1]][Edge.path[0]] = (CityModeGraph[Edge.path[1]][Edge.path[0]] + 1) % 2
-        
-        for i in range(20):
-            for j in range(20):
-                CityGraph[i][j] = DefaultCityGraph[i][j] * CityModeGraph[i][j]
-        
-        if CheckMatrix(CityGraph):
-            canvas.itemconfig(Edge.object, fill=EdgeColors[canvas.itemconfig(Edge.object)["fill"][4]])
-            for TrafficLight in TrafficLights:
-                if Edge.path == TrafficLight.path or Edge.path == TrafficLight.path[::-1]:
-                    TrafficLight.mode += 2 * (-1)**(TrafficLight.mode // 3)
-                    for i in range(2):
-                        canvas.itemconfig(TrafficLight.object[i], fill = TrafficLightColors[TrafficLight.mode])
-        else:
-            CityModeGraph[Edge.path[0]][Edge.path[1]] = (CityModeGraph[Edge.path[0]][Edge.path[1]] + 1) % 2
-            CityModeGraph[Edge.path[1]][Edge.path[0]] = (CityModeGraph[Edge.path[1]][Edge.path[0]] + 1) % 2
+def Delete(event, ModeKey):
+    Edge = 0
+    x = canvas.winfo_pointerx() - canvas.winfo_rootx()
+    y = canvas.winfo_pointery() - canvas.winfo_rooty()
+    for i in range(len(Edges)):
+        distance = 1000
+        CurrentEdgeCoords = canvas.coords(Edges[i].object)
+        A = (CurrentEdgeCoords[3] - CurrentEdgeCoords[1]) / (CurrentEdgeCoords[2] - CurrentEdgeCoords[0])
+        B = CurrentEdgeCoords[1] - A * CurrentEdgeCoords[0]
+        distance = abs((A * x - 1 * y + B) / (A**2 + 1)**(1/2))
+        if i == 0:
+            MinDistance = distance
+        if distance <= MinDistance and Edges == 0:
+            Edge = Edges[i]
+            Number = i
+            MinDistance = distance
+        if ((x >= CurrentEdgeCoords[0]) == (x <= CurrentEdgeCoords[2])) and ((y >= CurrentEdgeCoords[1]) == (y <= CurrentEdgeCoords[3])):
+            if distance <= MinDistance:
+                Edge = Edges[i]
+                Number = i
+                MinDistance = distance
+    if ModeKey == 0 and Edge != 0 and DeleteMode == 1:
+        DeleteEdge(Number)
 
 def ModeButtonClick():
     global ModeKey
     global CityGraph
     global CityModeGraph
     global DefaultCityGraph
-
-    for i in range(20):
-            for j in range(20):
+    CreateAllMatrix()
+    for i in range(len(Nodes)):
+            for j in range(len(Nodes)):
                 CityGraph[i][j] = DefaultCityGraph[i][j] * CityModeGraph[i][j]
 
-    if ModeKey == 0:
+    if ModeKey == 0 and CheckMatrix(CityGraph) and EditMode == 0 and len(Nodes) > 1:
         ModeKey = (ModeKey + 1) % 2
         ModeButton["text"] = "Стоп"
+        EditButton.config(state = "disabled")
         
         Simulation()
 
     elif ModeKey == 1:
         ModeKey = (ModeKey + 1) % 2
         ModeButton["text"] = "Старт"
+        EditButton.config(state = "normal")
         Clean()
 
 def CurrentCreateCarMode(event):
@@ -343,17 +378,360 @@ def CurrentCarSpawnFrequency():
     }
     CarSpawnFrequency = FrequenciesMode[Frequencies.get()]
 
+def CurrentDeleteMode():
+    global DeleteMode
+    global AddMode
+    global LightMode
+    DeleteMode = 1
+    AddMode = 0
+    LightMode = 0
+
+def CurrentAddMode():
+    global DeleteMode
+    global AddMode
+    global LightMode
+    global NewLine
+    NewLine = [0, 0]
+    DeleteMode = 0
+    AddMode = 1
+    LightMode = 0
+
+def CurrentLightMode():
+    global DeleteMode
+    global AddMode
+    global LightMode
+    global NewLight
+    NewLight = [0, 0]
+    DeleteMode = 0
+    AddMode = 0
+    LightMode = 1
+
+def CurrentEditMode():
+    global EditMode
+    global EditWindow1
+    global EditWindow2
+    global EditWindow3
+    global DeleteMode
+    global AddMode
+    global LightMode
+    EditMode = (EditMode + 1) % 2
+    if EditMode == 1:
+        EditButton.config(text = "Сохранить")
+        Delete = "Удалить"
+        Add = "Добавить"
+        Light = "Светофоры"
+        Edit = StringVar()
+        FirstEditButton = Radiobutton(
+            text = Delete,
+            value = Delete, 
+            variable = Edit, 
+            font = TextFont,
+            background = 'gray',
+            indicatoron = 0,
+            command = CurrentDeleteMode
+        )
+        FirstEditButton.pack()
+        SecondEditButton = Radiobutton(
+            text = Add, 
+            value = Add, 
+            variable = Edit, 
+            background = 'gray',
+            font = TextFont,
+            indicatoron = 0,
+            command = CurrentAddMode
+        )
+        SecondEditButton.pack()
+        ThirdEditButton = Radiobutton(
+            text = Light, 
+            value = Light, 
+            variable = Edit, 
+            background = 'gray',
+            font = TextFont,
+            indicatoron = 0,
+            command = CurrentLightMode
+        )
+        ThirdEditButton.pack()
+        EditWindow1 = canvas.create_window((WindowX * (300 / 1500), WindowY * (40 / 950)), anchor = "center", window = FirstEditButton)
+        EditWindow2 = canvas.create_window((WindowX * (450 / 1500), WindowY * (40 / 950)), anchor = "center", window = SecondEditButton)
+        EditWindow3 = canvas.create_window((WindowX * (600 / 1500), WindowY * (40 / 950)), anchor = "center", window = ThirdEditButton)
+    
+    else:
+        DeleteMode = 0
+        AddMode = 0
+        LightMode = 0
+        EditButton.config(text = "Редактировать")
+        canvas.delete(EditWindow1)  
+        canvas.delete(EditWindow2) 
+        canvas.delete(EditWindow3) 
+
+def CreateAllMatrix():
+    global DefaultCityGraph
+    global CityModeGraph
+    global CityGraph
+    CityGraph = [[0] * len(Nodes) for i in range(len(Nodes))]
+    CityModeGraph = [[0] * len(Nodes) for i in range(len(Nodes))]
+    DefaultCityGraph = [[0] * len(Nodes) for i in range(len(Nodes))]
+    for Edge in Edges:
+        CityModeGraph[Edge.path[0]][Edge.path[1]] = 1
+        CityModeGraph[Edge.path[1]][Edge.path[0]] = 1
+    for i in range(len(Nodes)):
+        for j in range(i + 1, len(Nodes)):
+            if Nodes[i] != 0 and Nodes[j] != 0:
+                FirstCoords = [
+                    int(round(canvas.coords(Nodes[i].object)[0] + canvas.coords(Nodes[i].object)[2]) / 2),
+                    int(round(canvas.coords(Nodes[i].object)[1] + canvas.coords(Nodes[i].object)[3]) / 2)
+                ]
+                SecondCoords = [
+                    int(round(canvas.coords(Nodes[j].object)[0] + canvas.coords(Nodes[j].object)[2]) / 2),
+                    int(round(canvas.coords(Nodes[j].object)[1] + canvas.coords(Nodes[j].object)[3]) / 2)
+                ]
+                distance = int(round(((SecondCoords[0] - FirstCoords[0])**2 + (SecondCoords[1] - FirstCoords[1])**2)**(1/2)))
+                DefaultCityGraph[i][j] = distance * CityModeGraph[i][j]
+                DefaultCityGraph[j][i] = distance * CityModeGraph[j][i]
+
+def CreateNode(Coords):
+    global Nodes
+    global NewLine
+    NewNode = Node(0, 0)
+    NewNode.object = DrawPoint(Coords, canvas)
+    NewNode.CarCount = DrawCarCount(NewNode, canvas)
+    Nodes.append(NewNode)
+
+def DeleteNode(Number):
+    canvas.delete(Nodes[Number].object)
+    canvas.delete(Nodes[Number].CarCount)
+    NumbersToDelete = []
+    for i in range(len(Edges)):
+        if Edges[i].path[0] == Number or Edges[i].path[1] == Number:
+            NumbersToDelete.append(i)
+    for i in NumbersToDelete:
+        DeleteEdge(i)
+        for j in range(len(NumbersToDelete)):
+            NumbersToDelete[j] -= 1
+    Nodes.pop(Number)
+
+def CreateEdge(path):
+    NewEdge = Edge(0, 0, 0)
+    NewEdge.path = path
+    NewEdge.NodePath = (Nodes[path[0]], Nodes[path[1]])
+    NewEdgeCoords = [
+        canvas.coords(Nodes[path[0]].object)[0] + 10,
+        canvas.coords(Nodes[path[0]].object)[1] + 10,
+        canvas.coords(Nodes[path[1]].object)[0] + 10,
+        canvas.coords(Nodes[path[1]].object)[1] + 10
+    ]
+    NewEdge.object = DrawLine(NewEdgeCoords, canvas)
+    Edges.append(NewEdge)
+    canvas.tag_bind(Edges[len(Edges) - 1].object, '<Button>', lambda event: Delete(event, ModeKey))
+
+def DeleteEdge(Number):
+    canvas.delete(Edges[Number].object)
+    NumbersToDelete = []
+    path = Edges[Number].path
+    for i in range(len(TrafficLights)):
+        if (path[0] == TrafficLights[i].path[0] and path[1] == TrafficLights[i].path[1]) or (path[0] == TrafficLights[i].path[1] and path[1] == TrafficLights[i].path[0]):
+            NumbersToDelete.append(i)
+    for i in NumbersToDelete:
+        for j in range(len(NumbersToDelete)):
+            NumbersToDelete[j] -= 1
+        DeleteTrafficLight(i)
+    Edges.pop(Number)
+
+def CreateTrafficLight(path):
+    NewTrafficLight = TrafficLight(0, 0, 0, 0)
+    NewTrafficLight.path = path
+    NewTrafficLight.NodePath = (Nodes[path[0]], Nodes[path[1]])
+    NewTrafficLight.mode = 1
+    TrafficCoords = canvas.coords(Nodes[path[0]].object)[0:2] + canvas.coords(Nodes[path[1]].object)[0:2]
+    NewTrafficLight.object = DrawTrafficLight(path, TrafficCoords, canvas)
+    for j in range(2):
+        canvas.itemconfig(NewTrafficLight.object[j], fill = TrafficLightColors[NewTrafficLight.mode])
+    TrafficLights.append(NewTrafficLight)
+
+def DeleteTrafficLight(Number):
+    canvas.delete(TrafficLights[Number].object[0])
+    canvas.delete(TrafficLights[Number].object[1])
+    TrafficLights.pop(Number)
+
+def EditEvents(event):
+    global NewLine
+    global NewLight
+    x = canvas.winfo_pointerx() - canvas.winfo_rootx()
+    y = canvas.winfo_pointery() - canvas.winfo_rooty()
+    if (x >= 40 and x <= 1010 and y >= 90 and y <= 890):
+        NewNodeCoords = [
+            x - 10,
+            y - 10,
+            x + 10,
+            y + 10
+        ]
+        if AddMode == 1:
+            CreateNode(NewNodeCoords)
+            if len(canvas.find_overlapping(NewNodeCoords[0] - 5, NewNodeCoords[1] - 5, NewNodeCoords[2] + 5, NewNodeCoords[3] + 5)) > 2:
+                DeleteNode(len(Nodes) - 1)
+            else:
+                NewLine = [0, 0]
+            for i in range(len(Nodes)):
+                if Nodes[i] != 0:
+                    NodeCoords = [
+                        canvas.coords(Nodes[i].object)[0] + 10,
+                        canvas.coords(Nodes[i].object)[1] + 10
+                    ]
+                    distance = ((NodeCoords[0] - x)**2 + (NodeCoords[1] - y)**2)**(1/2)
+                    if distance <= 15:
+                        if NewLine[0] == 0:
+                            NewLine[0] = i
+                        elif NewLine[1] == 0 and NewLine[0] != i:
+                            NewLine[1] = i
+                            flag = 1
+                            for j in range(len(Edges)):
+                                if Edges[j].path[0] == NewLine[0] and Edges[j].path[1] == NewLine[1] or Edges[j].path[0] == NewLine[1] and Edges[j].path[1] == NewLine[0]:
+                                    flag = 0
+                            if flag == 1:
+                                CreateEdge(NewLine)
+                                NewLine = [0, 0]     
+                            else:
+                                NewLine = [NewLine[1], 0] 
+        if DeleteMode == 1:
+            NumberToDelete = -1
+            for i in range(len(Nodes)):
+                if Nodes[i] != 0:
+                    NodeCoords = [
+                        canvas.coords(Nodes[i].object)[0] + 10,
+                        canvas.coords(Nodes[i].object)[1] + 10
+                    ]
+                    distance = ((NodeCoords[0] - x)**2 + (NodeCoords[1] - y)**2)**(1/2)
+                    if distance <= 15:
+                        NumberToDelete = i
+            if NumberToDelete != -1:
+                DeleteNode(NumberToDelete)
+            while i < len(TrafficLights):
+                TriangleCoords = canvas.coords(TrafficLights[i].object[1])
+                CenterCoords = [
+                    (TriangleCoords[0] + TriangleCoords[2] + TriangleCoords[4]) / 3,
+                    (TriangleCoords[1] + TriangleCoords[3] + TriangleCoords[5]) / 3
+                ]
+                FirstPoint = [TriangleCoords[0], TriangleCoords[1]]
+                SecondPoint = [TriangleCoords[2], TriangleCoords[3]]
+                ThirdPoint = [TriangleCoords[4], TriangleCoords[5]]
+                FirstPoint = GoFromCenter(FirstPoint, CenterCoords)
+                SecondPoint = GoFromCenter(SecondPoint, CenterCoords)
+                ThirdPoint = GoFromCenter(ThirdPoint, CenterCoords)
+                TriangleCoords = FirstPoint + SecondPoint + ThirdPoint
+                if PointInTriangle(TriangleCoords, x, y):
+                    DeleteTrafficLight(i)
+                i += 1
+
+        if LightMode == 1:
+            for i in range(len(Nodes)):
+                if Nodes[i] != 0:
+                    NodeCoords = [
+                        canvas.coords(Nodes[i].object)[0] + 10,
+                        canvas.coords(Nodes[i].object)[1] + 10
+                    ]
+                    distance = ((NodeCoords[0] - x)**2 + (NodeCoords[1] - y)**2)**(1/2)
+                    if distance <= 15:
+                        if NewLight[0] == 0:
+                            NewLight[0] = i
+                        elif NewLight[1] == 0 and NewLight[0] != i:
+                            NewLight[1] = i
+                            flag = 0
+                            Path1 = (NewLight[0], NewLight[1])
+                            Path2 = (NewLight[1], NewLight[0])
+                            for j in range(len(Edges)):
+                                if Edges[j].path == Path1 or Edges[j].path == Path2:
+                                    flag = 1
+                            for j in range(len(TrafficLights)):
+                                if TrafficLights[j].path == Path1:
+                                    flag = 0
+                            if flag == 1:
+                                CreateTrafficLight(NewLight)
+                                NewLight = [0, 0]
+                            else:
+                                NewLight = [NewLight[1], 0]
+
+            for i in range(len(TrafficLights)):
+                TriangleCoords = canvas.coords(TrafficLights[i].object[1])
+                CenterCoords = [
+                    (TriangleCoords[0] + TriangleCoords[2] + TriangleCoords[4]) / 3,
+                    (TriangleCoords[1] + TriangleCoords[3] + TriangleCoords[5]) / 3
+                ]
+                FirstPoint = [TriangleCoords[0], TriangleCoords[1]]
+                SecondPoint = [TriangleCoords[2], TriangleCoords[3]]
+                ThirdPoint = [TriangleCoords[4], TriangleCoords[5]]
+                FirstPoint = GoFromCenter(FirstPoint, CenterCoords)
+                SecondPoint = GoFromCenter(SecondPoint, CenterCoords)
+                ThirdPoint = GoFromCenter(ThirdPoint, CenterCoords)
+                TriangleCoords = FirstPoint + SecondPoint + ThirdPoint
+                if PointInTriangle(TriangleCoords, x, y):
+                    TrafficLights[i].mode = (TrafficLights[i].mode + 1) % 2
+                    for j in range(2):
+                        canvas.itemconfig(TrafficLights[i].object[j], fill = TrafficLightColors[TrafficLights[i].mode])
+        UpdatePath()
+    
+def UpdatePath():
+    for i in range(len(Edges)):
+        Edges[i].path = NodePathToPath(Edges[i].NodePath, Nodes, canvas)
+    for i in range(len(TrafficLights)):
+        TrafficLights[i].path = NodePathToPath(TrafficLights[i].NodePath, Nodes, canvas)
+
+def GoFromCenter(Point, Center):
+    NewPoint = [
+        Center[0] + (Point[0] - Center[0]) * 2.5,
+        Center[1] + (Point[1] - Center[1]) * 2.5
+    ]
+    return NewPoint
+
+def PointInTriangle(TriangleCoords, x, y):
+    a = [TriangleCoords[0], TriangleCoords[1]]
+    b = [TriangleCoords[2], TriangleCoords[3]]
+    c = [TriangleCoords[4], TriangleCoords[5]]
+    p = [x, y]
+    TriangleArea = GetTriangleArea(a, b, c)
+    FirstArea = GetTriangleArea(a, b, p)
+    SecondArea = GetTriangleArea(a, p, c)
+    ThirdArea = GetTriangleArea(p, b, c)
+    if TriangleArea == (FirstArea + SecondArea + ThirdArea):
+        return True
+    else: return False
+
+def GetTriangleArea(a, b, c):
+    return abs((a[0] - c[0]) * (b[1] - c[1]) + (b[0] - c[0]) * (c[1] - a[1]))
+
+def OutputInformation():
+    InfoWindow = Tk()
+    InfoWindowX = round(InfoWindow.winfo_screenwidth() / 1.5)
+    print(InfoWindowX)
+    InfoWindowY = round(InfoWindow.winfo_screenheight() / 1.2)
+    InfoWindow.geometry("{}x{}".format(InfoWindowX, InfoWindowY))
+    InfoCanvas = Canvas(InfoWindow, width=InfoWindowX, height=InfoWindowY, bg='white')
+    InfoCanvas.pack()
+    InfoFont = ("Arial", round(16 / InfoWindowX * 1280), "bold")
+    InformationOptions = {
+        'font': InfoFont,
+        'text': InfoText,
+        'anchor': 'center',
+        'fill': 'black'
+    }
+    """ label = Label(InfoWindow, text = InfoText, font = InfoFont, anchor = 'center', fg='black')
+    label.pack() """
+    InfoCanvas.create_text(InfoWindowX / 2, InfoWindowY / 2, InformationOptions)
+
+    InfoWindow.mainloop()
+
 if __name__ == "__main__":
     TrafficLightColors = {
         1: 'green',
-        2: 'red',
-        3: 'gray',
-        4: 'gray'
+        0: 'red'
     }
     CreateCarMode = 'Optimise'
     CarSpawnFrequency = 7
     Cars = []
     ModeKey = 0
+    EditMode = 0
+    DeleteMode = 0
+    AddMode = 0
+    LightMode = 0
     window = Tk()
     WindowX = round(window.winfo_screenwidth() / 1.28)
     WindowY = round(window.winfo_screenheight() / 1.137)
@@ -362,7 +740,8 @@ if __name__ == "__main__":
     window.geometry("{}x{}".format(WindowX, WindowY))
     canvas = Canvas(window, width=WindowX, height=WindowY - 50, bg='white')
     canvas.pack()
-    ModeButton = Button(window, text="Старт", height = 2, width = 20, command=ModeButtonClick)   
+    TextFont = ("Arial", 12, "bold")
+    ModeButton = Button(window, text="Старт", font = TextFont, height = 2, width = 10, command=ModeButtonClick)   
     ModeButton.pack()
     TextFont = ("Arial", 16, "bold")
     Box = ttk.Combobox(
@@ -376,10 +755,9 @@ if __name__ == "__main__":
     Box.pack()
     Box.bind("<<ComboboxSelected>>", CurrentCreateCarMode)
     canvas.create_window((TextX, WindowY * (225 / 950)), anchor = "center", window = Box)
-    CityGraph = [[0] * 20 for i in range(20)]
     Nodes = [Node(0, 0) for i in range(20)]
-    Edges = [Edge(0, (0, 0)) for i in range(28)]
-    TrafficLights = [TrafficLight(0, (0, 0), 0) for i in range(56)]
+    Edges = [Edge(0, 0, 0) for i in range(28)]
+    TrafficLights = [TrafficLight(0, 0, 0, 0) for i in range(56)]
     Information = [0, 0, 0, 0, 0]
     
     Low = "Низкая"
@@ -404,54 +782,47 @@ if __name__ == "__main__":
         background = 'gray',
         font = TextFont,
         indicatoron = 0,
-        command = CurrentCarSpawnFrequency)
+        disabled = "black",
+        command = CurrentCarSpawnFrequency
+    )
     SecondButton.pack()
     ThirdButton = Radiobutton(
         text = High, 
-        value = High, 
+        value = High,  
         variable = Frequencies, 
         background = 'gray',
         font = TextFont,
         indicatoron = 0,
-        command = CurrentCarSpawnFrequency)
+        command = CurrentCarSpawnFrequency
+    )
     ThirdButton.pack()
     canvas.create_window((TextX, WindowY * (70 / 950)), anchor = "center", window = FirstButton)
     canvas.create_window((TextX, WindowY * (110 / 950)), anchor = "center", window = SecondButton)
     canvas.create_window((TextX, WindowY * (150 / 950)), anchor = "center", window = ThirdButton)
-
+    EditButton = Button(
+        text = "Редактировать", 
+        font = TextFont,
+        background = 'gray',
+        disabled = "black",
+        command = CurrentEditMode
+    )
+    EditButton.pack()
+    canvas.create_window((WindowX * (100 / 1500), WindowY * (40 / 950)), anchor = "center", window = EditButton)
+    HelpButton = Button(
+        text = "Помощь", 
+        font = TextFont,
+        background = 'gray',
+        disabled = "black",
+        command = OutputInformation
+    )
+    HelpButton.pack()
+    canvas.create_window((WindowX * (1000 / 1500), WindowY * (40 / 950)), anchor = "center", window = HelpButton)
     Base(Edges, Nodes, TrafficLights, Information, canvas, WindowX, WindowY)
-    for i in range(56):
-        TrafficLights[i].mode = DefaultTrafficLightMode[i]
-        for j in range(2):
-            canvas.itemconfig(TrafficLights[i].object[j], fill = TrafficLightColors[TrafficLights[i].mode])
-
-    canvas.tag_bind(Edges[0].object, '<Button>', lambda event: Click(Edges[0], event, ModeKey))
-    canvas.tag_bind(Edges[1].object, '<Button>', lambda event: Click(Edges[1], event, ModeKey))
-    canvas.tag_bind(Edges[2].object, '<Button>', lambda event: Click(Edges[2], event, ModeKey))
-    canvas.tag_bind(Edges[3].object, '<Button>', lambda event: Click(Edges[3], event, ModeKey))
-    canvas.tag_bind(Edges[4].object, '<Button>', lambda event: Click(Edges[4], event, ModeKey))
-    canvas.tag_bind(Edges[5].object, '<Button>', lambda event: Click(Edges[5], event, ModeKey))
-    canvas.tag_bind(Edges[6].object, '<Button>', lambda event: Click(Edges[6], event, ModeKey))
-    canvas.tag_bind(Edges[7].object, '<Button>', lambda event: Click(Edges[7], event, ModeKey))
-    canvas.tag_bind(Edges[8].object, '<Button>', lambda event: Click(Edges[8], event, ModeKey))
-    canvas.tag_bind(Edges[9].object, '<Button>', lambda event: Click(Edges[9], event, ModeKey))
-    canvas.tag_bind(Edges[10].object, '<Button>', lambda event: Click(Edges[10], event, ModeKey))
-    canvas.tag_bind(Edges[11].object, '<Button>', lambda event: Click(Edges[11], event, ModeKey))
-    canvas.tag_bind(Edges[12].object, '<Button>', lambda event: Click(Edges[12], event, ModeKey))
-    canvas.tag_bind(Edges[13].object, '<Button>', lambda event: Click(Edges[13], event, ModeKey))
-    canvas.tag_bind(Edges[14].object, '<Button>', lambda event: Click(Edges[14], event, ModeKey))
-    canvas.tag_bind(Edges[15].object, '<Button>', lambda event: Click(Edges[15], event, ModeKey))
-    canvas.tag_bind(Edges[16].object, '<Button>', lambda event: Click(Edges[16], event, ModeKey))
-    canvas.tag_bind(Edges[17].object, '<Button>', lambda event: Click(Edges[17], event, ModeKey))
-    canvas.tag_bind(Edges[18].object, '<Button>', lambda event: Click(Edges[18], event, ModeKey))
-    canvas.tag_bind(Edges[19].object, '<Button>', lambda event: Click(Edges[19], event, ModeKey))
-    canvas.tag_bind(Edges[20].object, '<Button>', lambda event: Click(Edges[20], event, ModeKey))
-    canvas.tag_bind(Edges[21].object, '<Button>', lambda event: Click(Edges[21], event, ModeKey))
-    canvas.tag_bind(Edges[22].object, '<Button>', lambda event: Click(Edges[22], event, ModeKey))
-    canvas.tag_bind(Edges[23].object, '<Button>', lambda event: Click(Edges[23], event, ModeKey))
-    canvas.tag_bind(Edges[24].object, '<Button>', lambda event: Click(Edges[24], event, ModeKey))
-    canvas.tag_bind(Edges[25].object, '<Button>', lambda event: Click(Edges[25], event, ModeKey))
-    canvas.tag_bind(Edges[26].object, '<Button>', lambda event: Click(Edges[26], event, ModeKey))
-    canvas.tag_bind(Edges[27].object, '<Button>', lambda event: Click(Edges[27], event, ModeKey))
-
+    CityGraph = [[0] * len(Nodes) for i in range(len(Nodes))]
+    CityModeGraph = [[0] * len(Nodes) for i in range(len(Nodes))]
+    DefaultCityGraph = [[0] * len(Nodes) for i in range(len(Nodes))]
+    CreateAllMatrix()
+    for i in range(len(Edges)):
+        canvas.tag_bind(Edges[i].object, '<Button>', lambda event: Delete(event, ModeKey))
+    canvas.bind('<Button-1>', EditEvents)
     window.mainloop()
