@@ -249,6 +249,8 @@ def Simulation():
             CarCoords[3] += 5
             NodeDistanse = ((CarCoords[0] - NodeCoords[0])**2 + (CarCoords[1] - NodeCoords[1])**2)**(1/2)
             if CarCoords == NodeCoords:
+                car.path = [car.path[0], car.path[-1]]
+                car.path = CreatePath(car.path, CreateCarMode)
                 for TrafficLight in TrafficLights:
                     if TrafficLight.path[0] == car.path[0] and TrafficLight.path[1] == car.path[1]:
                         if TrafficLight.mode == 0:
@@ -314,6 +316,10 @@ def Clean():
     canvas.itemconfig(Information[4], text = "0")
 
 def Delete(event, ModeKey):
+    EdgeColors = {
+        'lightgray': "black",
+        'black': "lightgray"
+    }
     Edge = 0
     x = canvas.winfo_pointerx() - canvas.winfo_rootx()
     y = canvas.winfo_pointery() - canvas.winfo_rooty()
@@ -336,6 +342,23 @@ def Delete(event, ModeKey):
                 MinDistance = distance
     if ModeKey == 0 and Edge != 0 and DeleteMode == 1:
         DeleteEdge(Number)
+    if Edge != 0:
+        CityModeGraph[Edge.path[0]][Edge.path[1]] = (CityModeGraph[Edge.path[0]][Edge.path[1]] + 1) % 2
+        CityModeGraph[Edge.path[1]][Edge.path[0]] = (CityModeGraph[Edge.path[1]][Edge.path[0]] + 1) % 2
+        CopyCityGraph = [[0] * len(Nodes) for i in range(len(Nodes))]
+        for i in range(len(Nodes)):
+            for j in range(len(Nodes)):
+                CopyCityGraph[i][j] = DefaultCityGraph[i][j] * CityModeGraph[i][j]
+
+        if CheckMatrix(CopyCityGraph):
+            for i in range(len(Nodes)):
+                for j in range(len(Nodes)):
+                    CityGraph[i][j] = CopyCityGraph[i][j]
+            canvas.itemconfig(Edge.object, fill=EdgeColors[canvas.itemconfig(Edge.object)["fill"][4]])
+        else:
+            CityModeGraph[Edge.path[0]][Edge.path[1]] = (CityModeGraph[Edge.path[0]][Edge.path[1]] + 1) % 2
+            CityModeGraph[Edge.path[1]][Edge.path[0]] = (CityModeGraph[Edge.path[1]][Edge.path[0]] + 1) % 2
+        
 
 def ModeButtonClick():
     global ModeKey
