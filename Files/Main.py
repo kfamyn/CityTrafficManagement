@@ -5,7 +5,6 @@ import time
 import colorsys
 from base import *
 import copy
-from PIL import Image, ImageTk
 
 class Car:
     def __init__(self, object, path, MoveVector):
@@ -314,8 +313,14 @@ def Clean():
     canvas.itemconfig(Information[2], text = "0:00")
     canvas.itemconfig(Information[3], text = "0")
     canvas.itemconfig(Information[4], text = "0")
+    for i in range(len(Edges)):
+        canvas.itemconfig(Edges[i].object, fill="black")
+    CreateAllMatrix()
 
 def Delete(event, ModeKey):
+    global CityModeGraph
+    global DefaultCityGraph
+    global CityGraph
     EdgeColors = {
         'lightgray': "black",
         'black': "lightgray"
@@ -342,7 +347,7 @@ def Delete(event, ModeKey):
                 MinDistance = distance
     if ModeKey == 0 and Edge != 0 and DeleteMode == 1:
         DeleteEdge(Number)
-    if Edge != 0:
+    if Edge != 0 and ModeKey == 1:
         CityModeGraph[Edge.path[0]][Edge.path[1]] = (CityModeGraph[Edge.path[0]][Edge.path[1]] + 1) % 2
         CityModeGraph[Edge.path[1]][Edge.path[0]] = (CityModeGraph[Edge.path[1]][Edge.path[0]] + 1) % 2
         CopyCityGraph = [[0] * len(Nodes) for i in range(len(Nodes))]
